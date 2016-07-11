@@ -221,6 +221,11 @@
 				TargetAttributes = {
 					299F7F041D33737800CFB118 = {
 						CreatedOnToolsVersion = 7.2.1;
+						SystemCapabilities = {
+							com.apple.BackgroundModes = {
+								enabled = 1;
+							};
+						};
 					};
 					299F7F1D1D33737800CFB118 = {
 						CreatedOnToolsVersion = 7.2.1;
@@ -516,6 +521,7 @@
 				299F7F341D33737800CFB118 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 		299F7F351D33737800CFB118 /* Build configuration list for PBXNativeTarget "MusicPlayerTests" */ = {
 			isa = XCConfigurationList;
@@ -524,6 +530,7 @@
 				299F7F371D33737800CFB118 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 		299F7F381D33737800CFB118 /* Build configuration list for PBXNativeTarget "MusicPlayerUITests" */ = {
 			isa = XCConfigurationList;
@@ -532,6 +539,7 @@
 				299F7F3A1D33737800CFB118 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};

@@ -7,6 +7,29 @@
 
 //菜鸟一个,不喜勿喷,欢迎大家关注我github,交流学习
 //
+/*
+ 1.设置后台运行模式：在plist文件中添加Required background modes，并且设置item 0=App plays audio or streams audio/video using AirPlay（其实可以直接通过Xcode在Project Targets-Capabilities-Background Modes中设置）
+ 2.设置AVAudioSession的类型为AVAudioSessionCategoryPlayback并且调用setActive::方法启动会话。
+ 
+ AVAudioSession *audioSession=[AVAudioSession sharedInstance];
+ [audioSession setCategory:AVAudioSessionCategoryPlayback error:nil];
+ [audioSession setActive:YES error:nil];
+ 3. 为了能够让应用退到后台之后支持耳机控制，建议添加远程控制事件（这一步不是后台播放必须的）
+ 
+ /////
+ 前两步是后台播放所必须设置的，第三步主要用于接收远程事件，如果这一步不设置虽然也能够在后台播放，但是无法获得音频控制权（如果在使用当前应用之前使用其他播放器播放音乐的话，此时如果按耳机播放键或者控制中心的播放按钮则会播放前一个应用的音频），并且不能使用耳机进行音频控制。第一步操作相信大家都很容易理解，如果应用程序要允许运行到后台必须设置，正常情况下应用如果进入后台会被挂起，通过该设置可以上应用程序继续在后台运行。但是第二步使用的AVAudioSession有必要进行一下详细的说明。
+ 
+ 在iOS中每个应用都有一个音频会话，这个会话就通过AVAudioSession来表示。AVAudioSession同样存在于AVFoundation框架中，它是单例模式设计，通过sharedInstance进行访问。在使用Apple设备时大家会发现有些应用只要打开其他音频播放就会终止，而有些应用却可以和其他应用同时播放，在多种音频环境中如何去控制播放的方式就是通过音频会话来完成的
+ 
+ 会话类型                       说明
+ AVAudioSessionCategoryAmbient	混音播放，可以与其他音频应用同时播放
+ AVAudioSessionCategorySoloAmbient	独占播放
+ AVAudioSessionCategoryPlayback	后台播放，也是独占的
+ AVAudioSessionCategoryRecord	录音模式，用于录音时使用
+ AVAudioSessionCategoryPlayAndRecord	播放和录音，此时可以录音也可以播
+ AVAudioSessionCategoryAudioProcessing	硬件解码音频，此时不能播放和录制	
+ AVAudioSessionCategoryMultiRoute	多种输入输出，例如可以耳机、USB设备同时播放
+ */
 
 #import "ViewController.h"
 #define KScreenWidth [UIScreen mainScreen].bounds.size.width
@@ -21,7 +44,7 @@
 @property(nonatomic,strong)AVAudioPlayer *player;   //只支持本地播放不支持网络加载
 @property(nonatomic,strong)NSTimer *timer;
 @property(nonatomic,strong)UIProgressView *progress;
-
+@property(nonatomic,strong)UIButton *playBtn;
 @end
 
 @implementation ViewController
@@ -43,6 +66,15 @@
     }
     systemVolume = volumeViewSlider.value;
     // Do any additional setup after loading the view, typically from a nib.
+}
+-(void)viewWillAppear:(BOOL)animated{
+    [super viewWillAppear:animated];
+    //开启远程控制   为了能够让应用退到后台之后支持耳机控制
+    [[UIApplication sharedApplication] beginReceivingRemoteControlEvents];
+}
+-(void)viewWillDisappear:(BOOL)animated{
+    [super viewWillDisappear:animated];
+    [[UIApplication sharedApplication] endReceivingRemoteControlEvents];
 }
 -(void)setUI{
     ////UI懒得布局随便写的,请只看知识点就ok
@@ -83,13 +115,13 @@
     [blavkView addSubview:preBtn];
     [preBtn addTarget:self action:@selector(preClick:) forControlEvents:UIControlEventTouchUpInside];
     
-    UIButton *playBtn = [UIButton buttonWithType:UIButtonTypeSystem];
-    [playBtn setTitle:@"播放" forState:UIControlStateNormal];
-    [playBtn setTitleColor:[UIColor redColor] forState:UIControlStateNormal];
-    playBtn.frame = CGRectMake(KScreenWidth/2 - 25 , self.progress.frame.origin.y + 10 +10, 50, 50);
-    playBtn.backgroundColor = [UIColor lightGrayColor];
-    [blavkView addSubview:playBtn];
-    [playBtn addTarget:self action:@selector(playClick:) forControlEvents:UIControlEventTouchUpInside];
+    self.playBtn = [UIButton buttonWithType:UIButtonTypeSystem];
+    [self.playBtn setTitle:@"播放" forState:UIControlStateNormal];
+    [self.playBtn setTitleColor:[UIColor redColor] forState:UIControlStateNormal];
+    self.playBtn.frame = CGRectMake(KScreenWidth/2 - 25 , self.progress.frame.origin.y + 10 +10, 50, 50);
+    self.playBtn.backgroundColor = [UIColor lightGrayColor];
+    [blavkView addSubview:self.playBtn];
+    [self.playBtn addTarget:self action:@selector(playClick:) forControlEvents:UIControlEventTouchUpInside];
     
     UIButton *nextBtn = [UIButton buttonWithType:UIButtonTypeSystem];
     [nextBtn setTitle:@">>" forState:UIControlStateNormal];
@@ -125,6 +157,7 @@
     if ([self.player isPlaying]) {
         [self.player pause];
         self.timer.fireDate = [NSDate distantFuture];//定时器暂停,不要废除定时器否则无法恢复
+        [self.playBtn setTitle:@"播放" forState:UIControlStateNormal];
     }
 }
 -(void)play{
@@ -135,6 +168,7 @@
     }else{
         [self.player play];
     }
+    [self.playBtn setTitle:@"暂停" forState:UIControlStateNormal];
 }
 -(void)upDataprogress{
     float progressValue = self.player.currentTime/self.player.duration;
@@ -149,7 +183,15 @@
     musicPlayer.volume = 3;
     [musicPlayer prepareToPlay];
     //立体声平衡，如果为-1.0则完全左声道，如果0.0则左右声道平衡，如果为1.0则完全为右声道
-    musicPlayer.pan = -1;
+    musicPlayer.pan = 0.0;
+    
+    //设置后台播放模式
+    AVAudioSession *audioSession=[AVAudioSession sharedInstance];
+    [audioSession setCategory:AVAudioSessionCategoryPlayback error:nil];
+    //        [audioSession setCategory:AVAudioSessionCategoryPlayback withOptions:AVAudioSessionCategoryOptionAllowBluetooth error:nil];
+    [audioSession setActive:YES error:nil];
+    //添加通知,拔出耳机后暂停播放
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(routeChange:) name:AVAudioSessionRouteChangeNotification object:nil];
     return musicPlayer;
 }
 - (void)audioPlayerDidFinishPlaying:(AVAudioPlayer *)player successfully:(BOOL)flag{
@@ -157,7 +199,18 @@
     self.timer = nil;
     NSLog(@"播放完成,调用下一首的方法");
 }
-
+-(void)routeChange:(NSNotification *)notification{
+    NSDictionary *dic = notification.userInfo;
+    int changeReason = [[dic objectForKey:AVAudioSessionRouteChangeReasonKey] intValue];
+    //如果旧输出不可用
+    if (changeReason == AVAudioSessionRouteChangeReasonOldDeviceUnavailable) {
+        AVAudioSessionRouteDescription *routeDescription = dic[AVAudioSessionRouteChangePreviousRouteKey];
+        AVAudioSessionPortDescription *portDescripation = [routeDescription.outputs firstObject];
+        if ([portDescripation.portType isEqualToString:@"Headphones"]) {
+            [self pause];
+        }
+    }
+}
 -(void)touchesBegan:(NSSet *)touches withEvent:(UIEvent *)event{
     if(event.allTouches.count == 1){
         //保存当前触摸的位置
@@ -198,8 +251,12 @@
         //        [UIScreen mainScreen].brightness = (float) dx/self.view.bounds.size.width;
     }
 }
+-(void)dealloc{
+    [[NSNotificationCenter defaultCenter] removeObserver:self name:AVAudioSessionRouteChangeNotification object:nil];
+}
 - (void)didReceiveMemoryWarning {
     [super didReceiveMemoryWarning];
+    [[AVAudioSession sharedInstance]setActive:NO error:nil];
     // Dispose of any resources that can be recreated.
 }
 
