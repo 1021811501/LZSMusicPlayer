@@ -27,7 +27,7 @@
  AVAudioSessionCategoryPlayback	后台播放，也是独占的
  AVAudioSessionCategoryRecord	录音模式，用于录音时使用
  AVAudioSessionCategoryPlayAndRecord	播放和录音，此时可以录音也可以播
- AVAudioSessionCategoryAudioProcessing	硬件解码音频，此时不能播放和录制	
+ AVAudioSessionCategoryAudioProcessing	硬件解码音频，此时不能播放和录制
  AVAudioSessionCategoryMultiRoute	多种输入输出，例如可以耳机、USB设备同时播放
  */
 
@@ -35,48 +35,53 @@
 #define KScreenWidth [UIScreen mainScreen].bounds.size.width
 #define KScreenHeight [UIScreen mainScreen].bounds.size.height
 @interface ViewController ()
-{
-    UISlider* volumeViewSlider;
-    float systemVolume;
-    CGPoint startPoint;//起始位置
-}
 @property(nonatomic,assign)BOOL isPlaying;
 @property(nonatomic,strong)AVAudioPlayer *player;   //只支持本地播放不支持网络加载
 @property(nonatomic,strong)NSTimer *timer;
 @property(nonatomic,strong)UIProgressView *progress;
 @property(nonatomic,strong)UIButton *playBtn;
+@property(nonatomic,strong)UISlider* volumeViewSlider;
+@property(nonatomic,assign)float systemVolume;
+@property(nonatomic,assign)CGPoint startPoint;
 @end
 
 @implementation ViewController
 
 - (void)viewDidLoad {
     [super viewDidLoad];
-    self.title  =@"海阔天空";
-    UIImageView *imageView = [[UIImageView  alloc] initWithFrame:self.view.frame];
-    imageView.image = [UIImage imageNamed:@"timg.jpg"];
-    [self.view addSubview:imageView];
     [self setUI];
-    MPVolumeView *volumeView = [[MPVolumeView alloc] init];
-    volumeViewSlider = nil;
-    for (UIView *view in [volumeView subviews]){
-        if ([view.class.description isEqualToString:@"MPVolumeSlider"]){
-            volumeViewSlider = (UISlider *)view;
-            break;
-        }
-    }
-    systemVolume = volumeViewSlider.value;
+    [self findSystemVolumeSlider];
     // Do any additional setup after loading the view, typically from a nib.
 }
+
 -(void)viewWillAppear:(BOOL)animated{
     [super viewWillAppear:animated];
     //开启远程控制   为了能够让应用退到后台之后支持耳机控制
     [[UIApplication sharedApplication] beginReceivingRemoteControlEvents];
 }
+
 -(void)viewWillDisappear:(BOOL)animated{
     [super viewWillDisappear:animated];
     [[UIApplication sharedApplication] endReceivingRemoteControlEvents];
 }
+
+-(void)findSystemVolumeSlider{
+    MPVolumeView *volumeView = [[MPVolumeView alloc] init];
+    self.volumeViewSlider = nil;
+    for (UIView *view in [volumeView subviews]){
+        if ([view.class.description isEqualToString:@"MPVolumeSlider"]){
+            self.volumeViewSlider = (UISlider *)view;
+            break;
+        }
+    }
+    self.systemVolume = self.volumeViewSlider.value;
+}
+
 -(void)setUI{
+    self.title  =@"海阔天空";
+    UIImageView *imageView = [[UIImageView  alloc] initWithFrame:self.view.frame];
+    imageView.image = [UIImage imageNamed:@"timg.jpg"];
+    [self.view addSubview:imageView];
     ////UI懒得布局随便写的,请只看知识点就ok
     UIView *blavkView = [[UIView alloc] initWithFrame:CGRectMake(0, KScreenHeight - 128, KScreenWidth, 128)];
     blavkView.backgroundColor = [UIColor colorWithRed:0 green:0 blue:0 alpha:0.8];
@@ -132,9 +137,11 @@
     [nextBtn addTarget:self action:@selector(nextClick:) forControlEvents:UIControlEventTouchUpInside];
     
 }
+
 -(void)preClick:(UIButton *)btn{
     NSLog(@"上一首");
 }
+
 -(void)playClick:(UIButton *)btn{
     if (!self.timer) {
         self.timer = [NSTimer scheduledTimerWithTimeInterval:0.1 target:self selector:@selector(upDataprogress) userInfo:nil repeats:YES];
@@ -153,6 +160,7 @@
 -(void)nextClick:(UIButton *)btn{
     NSLog(@"下一首");
 }
+
 -(void)pause{
     if ([self.player isPlaying]) {
         [self.player pause];
@@ -160,6 +168,7 @@
         [self.playBtn setTitle:@"播放" forState:UIControlStateNormal];
     }
 }
+
 -(void)play{
     self.timer.fireDate = [NSDate distantPast]; //恢复定时器
     if (!self.player) {
@@ -170,10 +179,12 @@
     }
     [self.playBtn setTitle:@"暂停" forState:UIControlStateNormal];
 }
+
 -(void)upDataprogress{
     float progressValue = self.player.currentTime/self.player.duration;
     [self.progress setProgress:progressValue animated:YES];
 }
+
 -(AVAudioPlayer *)createMusicPlayer{
     NSString *urlStr = [[NSBundle mainBundle] pathForResource:@"海阔天空.mp3" ofType:nil];
     NSURL *url = [NSURL fileURLWithPath:urlStr];
@@ -185,14 +196,22 @@
     //立体声平衡，如果为-1.0则完全左声道，如果0.0则左右声道平衡，如果为1.0则完全为右声道
     musicPlayer.pan = 0.0;
     
+    [self configurationBacgroundMode];
+    [self configurationHeadset];
+    return musicPlayer;
+}
+
+-(void)configurationBacgroundMode{
     //设置后台播放模式
     AVAudioSession *audioSession=[AVAudioSession sharedInstance];
     [audioSession setCategory:AVAudioSessionCategoryPlayback error:nil];
     //        [audioSession setCategory:AVAudioSessionCategoryPlayback withOptions:AVAudioSessionCategoryOptionAllowBluetooth error:nil];
     [audioSession setActive:YES error:nil];
+}
+
+-(void)configurationHeadset{
     //添加通知,拔出耳机后暂停播放
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(routeChange:) name:AVAudioSessionRouteChangeNotification object:nil];
-    return musicPlayer;
 }
 - (void)audioPlayerDidFinishPlaying:(AVAudioPlayer *)player successfully:(BOOL)flag{
     [self.timer invalidate];
@@ -215,7 +234,7 @@
     if(event.allTouches.count == 1){
         //保存当前触摸的位置
         CGPoint point = [[touches anyObject] locationInView:self.view];
-        startPoint = point;
+        self.startPoint = point;
     }
 }
 
@@ -225,25 +244,25 @@
         //计算位移
         CGPoint point = [[touches anyObject] locationInView:self.view];
         //        float dx = point.x - startPoint.x;
-        float dy = point.y - startPoint.y;
+        float dy = point.y - self.startPoint.y;
         int index = (int)dy;
         if(index>0){
             if(index%5==0){//每10个像素声音减一格
-                NSLog(@"%.2f",systemVolume);
-                if(systemVolume>0.1){
-                    systemVolume = systemVolume-0.05;
-                    [volumeViewSlider setValue:systemVolume animated:YES];
-                    [volumeViewSlider sendActionsForControlEvents:UIControlEventTouchUpInside];
+                NSLog(@"%.2f",self.systemVolume);
+                if(self.systemVolume>0.1){
+                    self.systemVolume = self.systemVolume-0.05;
+                    [self.volumeViewSlider setValue:self.systemVolume animated:YES];
+                    [self.volumeViewSlider sendActionsForControlEvents:UIControlEventTouchUpInside];
                 }
             }
         }else{
             if(index%5==0){//每10个像素声音增加一格
                 NSLog(@"+x ==%d",index);
-                NSLog(@"%.2f",systemVolume);
-                if(systemVolume>=0 && systemVolume<1){
-                    systemVolume = systemVolume+0.05;
-                    [volumeViewSlider setValue:systemVolume animated:YES];
-                    [volumeViewSlider sendActionsForControlEvents:UIControlEventTouchUpInside];
+                NSLog(@"%.2f",self.systemVolume);
+                if(self.systemVolume>=0 && self.systemVolume<1){
+                    self.systemVolume = self.systemVolume+0.05;
+                    [self.volumeViewSlider setValue:self.systemVolume animated:YES];
+                    [self.volumeViewSlider sendActionsForControlEvents:UIControlEventTouchUpInside];
                 }
             }
         }
