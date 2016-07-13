@@ -218,6 +218,74 @@
     self.timer = nil;
     NSLog(@"播放完成,调用下一首的方法");
 }
+-(void)remoteControlReceivedWithEvent:(UIEvent *)event{
+    if (event.type == UIEventTypeRemoteControl) {
+        switch (event.subtype ) {
+                //播放或暂停切换【操作：播放或暂停状态下，按耳机线控中间按钮一下】
+            case UIEventSubtypeRemoteControlTogglePlayPause:{
+                if (![self.player isPlaying]) {
+                    [self play];
+                }else{
+                    [self pause];
+                }
+                
+            }
+            case UIEventSubtypeNone:{
+                NSLog(@"不包含任何子事件");
+            }
+                break;
+            case UIEventSubtypeMotionShake:{
+                NSLog(@"摇晃事件(ios3.0开始支持)");
+            }
+                break;
+            case UIEventSubtypeRemoteControlPlay:{
+                NSLog(@"播放事件[操作:停止状态下按耳机中间键一下]");
+            }
+                case UIEventSubtypeRemoteControlPause :
+            {
+                NSLog(@"停止事件");
+            }
+                break;
+            case UIEventSubtypeRemoteControlStop:{
+                NSLog(@"停止事件");
+            }
+                break;
+            default:
+                break;
+        }
+    }
+}
+/*
+ typedef NS_ENUM(NSInteger, UIEventSubtype) {
+ // 不包含任何子事件类型
+ UIEventSubtypeNone                              = 0,
+ 
+ // 摇晃事件（从iOS3.0开始支持此事件）
+ UIEventSubtypeMotionShake                       = 1,
+ 
+ //远程控制子事件类型（从iOS4.0开始支持远程控制事件）
+ //播放事件【操作：停止状态下，按耳机线控中间按钮一下】
+ UIEventSubtypeRemoteControlPlay                 = 100,
+ //暂停事件
+ UIEventSubtypeRemoteControlPause                = 101,
+ //停止事件
+ UIEventSubtypeRemoteControlStop                 = 102,
+ //播放或暂停切换【操作：播放或暂停状态下，按耳机线控中间按钮一下】
+ UIEventSubtypeRemoteControlTogglePlayPause      = 103,
+ //下一曲【操作：按耳机线控中间按钮两下】
+ UIEventSubtypeRemoteControlNextTrack            = 104,
+ //上一曲【操作：按耳机线控中间按钮三下】
+ UIEventSubtypeRemoteControlPreviousTrack        = 105,
+ //快退开始【操作：按耳机线控中间按钮三下不要松开】
+ UIEventSubtypeRemoteControlBeginSeekingBackward = 106,
+ //快退停止【操作：按耳机线控中间按钮三下到了快退的位置松开】
+ UIEventSubtypeRemoteControlEndSeekingBackward   = 107,
+ //快进开始【操作：按耳机线控中间按钮两下不要松开】
+ UIEventSubtypeRemoteControlBeginSeekingForward  = 108,
+ //快进停止【操作：按耳机线控中间按钮两下到了快进的位置松开】
+ UIEventSubtypeRemoteControlEndSeekingForward    = 109,
+ };
+ */
 -(void)routeChange:(NSNotification *)notification{
     NSDictionary *dic = notification.userInfo;
     int changeReason = [[dic objectForKey:AVAudioSessionRouteChangeReasonKey] intValue];

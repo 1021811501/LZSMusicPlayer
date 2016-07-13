@@ -11,8 +11,5 @@
 @interface AppDelegate : UIResponder <UIApplicationDelegate>
 
 @property (strong, nonatomic) UIWindow *window;
-
-@property (nonatomic ,strong)UIView *view;
-@property (nonatomic ,strong)UIView *view1;
 @end
 
