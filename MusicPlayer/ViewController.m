@@ -218,10 +218,17 @@
     self.timer = nil;
     NSLog(@"播放完成,调用下一首的方法");
 }
+//接受远程事件,
+/*
+ ios事件分为三类:
+ 1.触摸事件:通过触摸,手势进行触发(例如手指点击,缩放);
+ 2.运动事件:通过加速器进行触发(例如手机晃动)
+ 3.远程控制事件:通过其他远程设备触发(例如耳机控制按钮);
+ */
 -(void)remoteControlReceivedWithEvent:(UIEvent *)event{
     if (event.type == UIEventTypeRemoteControl) {
         switch (event.subtype ) {
-                //播放或暂停切换【操作：播放或暂停状态下，按耳机线控中间按钮一下】
+            //播放或暂停切换【操作：播放或暂停状态下，按耳机线控中间按钮一下】
             case UIEventSubtypeRemoteControlTogglePlayPause:{
                 if (![self.player isPlaying]) {
                     [self play];
@@ -241,7 +248,7 @@
             case UIEventSubtypeRemoteControlPlay:{
                 NSLog(@"播放事件[操作:停止状态下按耳机中间键一下]");
             }
-                case UIEventSubtypeRemoteControlPause :
+            case UIEventSubtypeRemoteControlPause :
             {
                 NSLog(@"停止事件");
             }
